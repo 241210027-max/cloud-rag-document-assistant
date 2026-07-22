@@ -1,16 +1,19 @@
 import streamlit as st
 import os
+import tempfile
 from dotenv import load_dotenv
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_pinecone import PineconeVectorStore
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# 1. Load the secret API keys (for local development)
+# 1. Load the secret API keys
 load_dotenv()
 
-# 2. Safely grab keys whether we are running locally (.env) or in the Cloud (st.secrets)
+# 2. Safely grab keys
 try:
     gemini_api_key = os.getenv("GEMINI_API_KEY") or st.secrets["GEMINI_API_KEY"]
     pinecone_api_key = os.getenv("PINECONE_API_KEY") or st.secrets["PINECONE_API_KEY"]
@@ -19,19 +22,17 @@ except (KeyError, FileNotFoundError):
     pinecone_api_key = None
     st.error("Missing API Keys! Please check your Streamlit Secrets.")
 
-# Ensure Pinecone can find its key in the cloud environment
 if pinecone_api_key:
     os.environ["PINECONE_API_KEY"] = pinecone_api_key
 
 # --- STREAMLIT UI SETUP ---
 st.set_page_config(page_title="RAG Document Assistant", page_icon="📄", layout="centered")
 st.title("📄 Cloud RAG Document Assistant")
-st.write("Ask any question about the uploaded document, and the AI will answer strictly based on the text.")
+st.write("Upload a PDF, and the AI will answer your questions strictly based on its contents.")
 st.markdown("---")
 
 @st.cache_resource
 def get_existing_vectorstore():
-    # Explicitly hand-deliver the Google API key to bypass Pydantic validation errors
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/gemini-embedding-001",
         output_dimensionality=768,
@@ -44,17 +45,49 @@ def get_existing_vectorstore():
     )
     return vectorstore
 
-# Connect to the database
 vector_db = get_existing_vectorstore()
 
+# --- FILE UPLOAD WIDGET ---
+uploaded_file = st.file_uploader("Upload a new PDF document", type="pdf")
+
+# If the user uploads a file, process it
+if uploaded_file is not None:
+    if st.button("Process Document"):
+        with st.spinner("Extracting text and uploading to database..."):
+            
+            # 1. Save the uploaded file to a temporary location
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                tmp_file_path = tmp_file.name
+            
+            # 2. Load the PDF
+            loader = PyPDFLoader(tmp_file_path)
+            pages = loader.load()
+            
+            # 3. Chunk the text
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, 
+                chunk_overlap=200
+            )
+            chunks = text_splitter.split_documents(pages)
+            
+            # 4. Upload the new vectors to Pinecone
+            vector_db.add_documents(chunks)
+            
+            # 5. Clean up the temporary file
+            os.remove(tmp_file_path)
+            
+            st.success("Document successfully processed and added to the AI's memory!")
+
+st.markdown("---")
+
 # --- USER INPUT ---
-user_query = st.text_input("What would you like to know about the document?")
+user_query = st.text_input("What would you like to know about the uploaded documents?")
 
 if st.button("Ask AI"):
     if user_query:
-        with st.spinner("Searching document and generating answer..."):
+        with st.spinner("Searching documents and generating answer..."):
             
-            # Explicitly hand-deliver the API key to the Brain as well
             llm = ChatGoogleGenerativeAI(
                 model="gemini-3.1-flash-lite", 
                 temperature=0,
