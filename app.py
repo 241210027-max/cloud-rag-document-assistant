@@ -29,6 +29,39 @@ st.set_page_config(
     page_icon="📄",
     layout="centered",
 )
+st.markdown(
+    """
+    <style>
+        .main-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            font-size: 1.05rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .document-card {
+            padding: 1rem 1.25rem;
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .source-card {
+            padding: 0.75rem 1rem;
+            border-left: 4px solid #4f46e5;
+            background: rgba(79, 70, 229, 0.05);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # --------------------------------------------------
@@ -77,10 +110,16 @@ if "document_processed" not in st.session_state:
 # Header
 # --------------------------------------------------
 
-st.title("📄 Cloud RAG Document Assistant")
+st.markdown(
+    '<div class="main-title">📄 Cloud RAG Document Assistant</div>',
+    unsafe_allow_html=True,
+)
 
-st.write(
-    "Upload a PDF and ask questions based strictly on its contents."
+st.markdown(
+    '<div class="subtitle">'
+    'Upload a PDF and ask questions based strictly on its contents.'
+    '</div>',
+    unsafe_allow_html=True,
 )
 
 st.markdown("---")
@@ -154,9 +193,14 @@ if st.session_state.document_processed:
 
     st.subheader("📚 Active Document")
 
-    st.write(
-        f"**{st.session_state.document_name}**"
-    )
+    with st.container(border=True):
+        st.markdown(
+            f"**{st.session_state.document_name}**"
+        )
+
+        st.caption(
+            "This document is ready for questions."
+        )
 
 
 # --------------------------------------------------
@@ -232,25 +276,20 @@ if st.button("Ask AI"):
                 sources = get_sources(response)
 
                 if sources:
+                  st.markdown("---")
+                  st.subheader("📚 Sources")
 
-                    st.markdown("---")
-
-                    st.subheader("📚 Sources")
-
-                    for source in sources:
-
-                        if source["page"] is not None:
-
-                            st.write(
-                                f"📄 **{source['source']}** "
-                                f"— Page {source['page']}"
-                            )
-
-                        else:
-
-                            st.write(
-                                f"📄 **{source['source']}**"
-                            )
+                  for source in sources:
+                   with st.container(border=True):
+                    if source["page"] is not None:
+                     st.markdown(
+                      f"📄 **{source['source']}**  \n"
+                      f"Page **{source['page']}**"
+                )
+                    else:
+                     st.markdown(
+                     f"📄 **{source['source']}**"
+                )
 
             except Exception as e:
 
