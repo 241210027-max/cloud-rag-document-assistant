@@ -14,6 +14,7 @@ from rag.generation import (
     get_llm,
     create_rag_chain,
     ask_question,
+    get_sources,
 )
 
 
@@ -35,11 +36,16 @@ st.set_page_config(
 # --------------------------------------------------
 
 try:
-    gemini_api_key = os.getenv("GEMINI_API_KEY") or st.secrets["GEMINI_API_KEY"]
+    gemini_api_key = (
+        os.getenv("GEMINI_API_KEY")
+        or st.secrets["GEMINI_API_KEY"]
+    )
+
     pinecone_api_key = (
         os.getenv("PINECONE_API_KEY")
         or st.secrets["PINECONE_API_KEY"]
     )
+
 except (KeyError, FileNotFoundError):
     gemini_api_key = None
     pinecone_api_key = None
@@ -92,7 +98,9 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
-    st.info(f"Selected document: **{uploaded_file.name}**")
+    st.info(
+        f"Selected document: **{uploaded_file.name}**"
+    )
 
     if st.button("Process Document", type="primary"):
 
@@ -128,9 +136,11 @@ if uploaded_file is not None:
                 )
 
             except Exception as e:
+
                 st.error(
                     "Something went wrong while processing the document."
                 )
+
                 st.exception(e)
 
 
@@ -196,7 +206,9 @@ if st.button("Ask AI"):
                 )
 
                 # Create Gemini + RAG chain
-                llm = get_llm(gemini_api_key)
+                llm = get_llm(
+                    gemini_api_key
+                )
 
                 rag_chain = create_rag_chain(
                     llm=llm,
@@ -209,13 +221,41 @@ if st.button("Ask AI"):
                     question=user_query,
                 )
 
+                # Display answer
                 st.success("Done!")
 
-                st.write(response["answer"])
+                st.write(
+                    response["answer"]
+                )
+
+                # Display retrieved sources
+                sources = get_sources(response)
+
+                if sources:
+
+                    st.markdown("---")
+
+                    st.subheader("📚 Sources")
+
+                    for source in sources:
+
+                        if source["page"] is not None:
+
+                            st.write(
+                                f"📄 **{source['source']}** "
+                                f"— Page {source['page']}"
+                            )
+
+                        else:
+
+                            st.write(
+                                f"📄 **{source['source']}**"
+                            )
 
             except Exception as e:
 
                 st.error(
                     "Something went wrong while generating the answer."
                 )
+
                 st.exception(e)

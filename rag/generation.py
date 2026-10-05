@@ -50,3 +50,32 @@ def ask_question(rag_chain, question):
             "input": question,
         }
     )
+def get_sources(response):
+    """Extract unique source references from retrieved documents."""
+
+    sources = []
+    seen = set()
+
+    for document in response.get("context", []):
+        metadata = document.metadata
+
+        source = metadata.get("source", "Unknown document")
+        page = metadata.get("page")
+
+        page_number = page + 1 if isinstance(page, int) else None
+
+        source_key = (source, page_number)
+
+        if source_key in seen:
+            continue
+
+        seen.add(source_key)
+
+        sources.append(
+            {
+                "source": source,
+                "page": page_number,
+            }
+        )
+
+    return sources
