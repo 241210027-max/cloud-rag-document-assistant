@@ -1,8 +1,7 @@
-streamlit
-python-dotenv
-langchain-google-genai
-langchain-pinecone
-langchain-classic
-langchain-community
-langchain-text-splitters
-pypdf
+streamlit==1.65.0
+python-dotenv==1.2.4
+langchain-google-genai==4.4.0
+langchain-pinecone==0.2.13
+langchain-classic==1.0.8
+langchain-community==0.4.2
+langchain-text-splitters==1.1.3
