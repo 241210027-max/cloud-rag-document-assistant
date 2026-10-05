@@ -25,41 +25,121 @@ from rag.generation import (
 load_dotenv()
 
 st.set_page_config(
-    page_title="RAG Document Assistant",
-    page_icon="📄",
-    layout="centered",
+    page_title="Cloud RAG Document Assistant",
+    page_icon="📚",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
+
+
+# --------------------------------------------------
+# Custom Styling
+# --------------------------------------------------
+
 st.markdown(
     """
-    <style>
-        .main-title {
-            font-size: 2.4rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
+<style>
 
-        .subtitle {
-            color: #6b7280;
-            font-size: 1.05rem;
-            margin-bottom: 1.5rem;
-        }
+.block-container {
+    max-width: 1200px;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
 
-        .document-card {
-            padding: 1rem 1.25rem;
-            border: 1px solid rgba(128, 128, 128, 0.25);
-            border-radius: 12px;
-            margin: 1rem 0;
-        }
+.hero {
+    padding: 2rem;
+    border-radius: 18px;
+    background: linear-gradient(
+        135deg,
+        rgba(79, 70, 229, 0.12),
+        rgba(59, 130, 246, 0.08)
+    );
+    border: 1px solid rgba(79, 70, 229, 0.18);
+    margin-bottom: 1.5rem;
+}
 
-        .source-card {
-            padding: 0.75rem 1rem;
-            border-left: 4px solid #4f46e5;
-            background: rgba(79, 70, 229, 0.05);
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-        }
-    </style>
-    """,
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.35rem;
+}
+
+.hero-subtitle {
+    font-size: 1.05rem;
+    color: #6b7280;
+    max-width: 760px;
+    line-height: 1.6;
+}
+
+.section-card {
+    padding: 1.4rem;
+    border-radius: 16px;
+    border: 1px solid rgba(128, 128, 128, 0.20);
+    background: rgba(128, 128, 128, 0.025);
+    margin-bottom: 1rem;
+}
+
+.document-card {
+    padding: 1.1rem 1.25rem;
+    border-radius: 14px;
+    border: 1px solid rgba(79, 70, 229, 0.18);
+    background: rgba(79, 70, 229, 0.045);
+}
+
+.answer-card {
+    padding: 1.4rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(79, 70, 229, 0.20);
+    background: rgba(79, 70, 229, 0.035);
+    margin-top: 1rem;
+    line-height: 1.7;
+}
+
+.eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 0.35rem;
+}
+
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.muted {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.sidebar-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.sidebar-text {
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.stButton > button {
+    border-radius: 10px;
+    font-weight: 600;
+    min-height: 2.7rem;
+}
+
+[data-testid="stFileUploader"] {
+    border-radius: 14px;
+}
+
+</style>
+""",
     unsafe_allow_html=True,
 )
 
@@ -105,73 +185,170 @@ if "document_name" not in st.session_state:
 if "document_processed" not in st.session_state:
     st.session_state.document_processed = False
 
+if "document_chunks" not in st.session_state:
+    st.session_state.document_chunks = 0
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 
 # --------------------------------------------------
-# Header
+# Sidebar
+# --------------------------------------------------
+
+with st.sidebar:
+
+    st.markdown(
+        '<div class="sidebar-title">📚 RAG Assistant</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="sidebar-text">'
+        "Upload a document and ask questions grounded in its contents."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    st.markdown("### Current Document")
+
+    if st.session_state.document_processed:
+
+        st.success("Document ready")
+
+        st.caption(
+            st.session_state.document_name
+        )
+
+        st.metric(
+            "Chunks",
+            st.session_state.document_chunks,
+        )
+
+        if st.button(
+            "Clear Document",
+            use_container_width=True,
+        ):
+
+            st.session_state.document_namespace = None
+            st.session_state.document_name = None
+            st.session_state.document_processed = False
+            st.session_state.document_chunks = 0
+            st.session_state.chat_history = []
+
+            st.rerun()
+
+    else:
+
+        st.info("No document loaded")
+
+    st.markdown("---")
+
+    st.markdown("### Pipeline")
+
+    st.caption("📄 PDF ingestion")
+    st.caption("🧩 Text chunking")
+    st.caption("🧠 Gemini embeddings")
+    st.caption("🔎 Pinecone retrieval")
+    st.caption("✨ Gemini generation")
+
+
+# --------------------------------------------------
+# Hero Header
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="main-title">📄 Cloud RAG Document Assistant</div>',
+    """
+<div class="hero">
+<div class="eyebrow">AI-Powered Document Search</div>
+<div class="hero-title">Cloud RAG Document Assistant</div>
+<div class="hero-subtitle">
+Upload a PDF, search its contents using semantic retrieval,
+and get concise answers grounded in the document.
+</div>
+</div>
+""",
     unsafe_allow_html=True,
 )
+
+
+# --------------------------------------------------
+# Upload Section
+# --------------------------------------------------
 
 st.markdown(
-    '<div class="subtitle">'
-    'Upload a PDF and ask questions based strictly on its contents.'
-    '</div>',
+    """
+<div class="section-card">
+<div class="card-title">📄 Upload your document</div>
+<div class="muted">Supported format: PDF</div>
+</div>
+""",
     unsafe_allow_html=True,
 )
-
-st.markdown("---")
-
-
-# --------------------------------------------------
-# Document Upload
-# --------------------------------------------------
 
 uploaded_file = st.file_uploader(
-    "Upload a PDF document",
+    "Choose a PDF document",
     type="pdf",
+    label_visibility="collapsed",
 )
 
+
+# --------------------------------------------------
+# Process Uploaded Document
+# --------------------------------------------------
 
 if uploaded_file is not None:
 
-    st.info(
-        f"Selected document: **{uploaded_file.name}**"
+    st.markdown(
+        f"""
+<div class="document-card">
+<div class="eyebrow">Selected Document</div>
+<div class="card-title">📄 {uploaded_file.name}</div>
+<div class="muted">Ready to be processed</div>
+</div>
+""",
+        unsafe_allow_html=True,
     )
 
-    if st.button("Process Document", type="primary"):
+    st.write("")
 
-        with st.spinner("Processing document..."):
+    if st.button(
+        "⚡ Process Document",
+        type="primary",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Extracting, embedding, and indexing your document..."
+        ):
 
             try:
-                # Create a unique namespace for this document
+
                 namespace = f"doc-{uuid.uuid4().hex}"
 
-                # Extract and chunk PDF
                 chunks = process_pdf(uploaded_file)
 
-                # Connect to Pinecone namespace
                 vectorstore = get_vectorstore(
                     gemini_api_key=gemini_api_key,
                     pinecone_api_key=pinecone_api_key,
                     namespace=namespace,
                 )
 
-                # Store chunks
                 add_documents(
                     vectorstore=vectorstore,
                     documents=chunks,
                 )
 
-                # Save document information
                 st.session_state.document_namespace = namespace
                 st.session_state.document_name = uploaded_file.name
                 st.session_state.document_processed = True
+                st.session_state.document_chunks = len(chunks)
+                st.session_state.chat_history = []
 
                 st.success(
-                    f"Successfully processed **{uploaded_file.name}**."
+                    f"Successfully processed {uploaded_file.name}"
                 )
 
             except Exception as e:
@@ -184,37 +361,104 @@ if uploaded_file is not None:
 
 
 # --------------------------------------------------
-# Document Status
+# Active Document
 # --------------------------------------------------
 
 if st.session_state.document_processed:
 
     st.markdown("---")
 
-    st.subheader("📚 Active Document")
+    st.markdown(
+        """
+<div class="eyebrow">Active Document</div>
+""",
+        unsafe_allow_html=True,
+    )
 
     with st.container(border=True):
-        st.markdown(
-            f"**{st.session_state.document_name}**"
-        )
 
-        st.caption(
-            "This document is ready for questions."
-        )
+        col1, col2 = st.columns([4, 1])
+
+        with col1:
+
+            st.markdown(
+                f"### 📄 {st.session_state.document_name}"
+            )
+
+            st.caption(
+                "Document indexed and ready for semantic search."
+            )
+
+        with col2:
+
+            st.metric(
+                "Chunks",
+                st.session_state.document_chunks,
+            )
 
 
 # --------------------------------------------------
-# Question Answering
+# Question Section
 # --------------------------------------------------
 
 st.markdown("---")
 
+st.markdown(
+    """
+<div class="eyebrow">Ask Your Document</div>
+<div class="card-title">What would you like to know?</div>
+""",
+    unsafe_allow_html=True,
+)
+
 user_query = st.text_input(
-    "What would you like to know about the document?"
+    "Question",
+    placeholder=(
+        "e.g. What are the key topics covered in this document?"
+    ),
+    label_visibility="collapsed",
 )
 
 
-if st.button("Ask AI"):
+# --------------------------------------------------
+# Example Questions
+# --------------------------------------------------
+
+if st.session_state.document_processed:
+
+    st.caption("Try an example:")
+
+    example_columns = st.columns(3)
+
+    examples = [
+        "What is this document about?",
+        "What are the key topics?",
+        "Summarize the important points.",
+    ]
+
+    for column, example in zip(
+        example_columns,
+        examples,
+    ):
+
+        with column:
+
+            if st.button(
+                example,
+                use_container_width=True,
+            ):
+                user_query = example
+
+
+# --------------------------------------------------
+# Ask Question
+# --------------------------------------------------
+
+if st.button(
+    "✨ Ask AI",
+    type="primary",
+    use_container_width=True,
+):
 
     if not st.session_state.document_processed:
 
@@ -236,22 +480,19 @@ if st.button("Ask AI"):
 
             try:
 
-                # Connect to the same document namespace
                 vectorstore = get_vectorstore(
                     gemini_api_key=gemini_api_key,
                     pinecone_api_key=pinecone_api_key,
                     namespace=st.session_state.document_namespace,
                 )
 
-                # Create retriever
                 retriever = get_retriever(
                     vectorstore=vectorstore,
                     k=3,
                 )
 
-                # Create Gemini + RAG chain
                 llm = get_llm(
-                    gemini_api_key
+                    gemini_api_key=gemini_api_key,
                 )
 
                 rag_chain = create_rag_chain(
@@ -259,36 +500,19 @@ if st.button("Ask AI"):
                     retriever=retriever,
                 )
 
-                # Ask question
                 response = ask_question(
                     rag_chain=rag_chain,
                     question=user_query,
                 )
 
-                # Display answer
-                st.success("Done!")
+                answer = response["answer"]
 
-                st.write(
-                    response["answer"]
-                )
-
-                # Display retrieved sources
-                sources = get_sources(response)
-
-                if sources:
-                  st.markdown("---")
-                  st.subheader("📚 Sources")
-
-                  for source in sources:
-                   with st.container(border=True):
-                    if source["page"] is not None:
-                     st.markdown(
-                      f"📄 **{source['source']}**  \n"
-                      f"Page **{source['page']}**"
-                )
-                    else:
-                     st.markdown(
-                     f"📄 **{source['source']}**"
+                st.session_state.chat_history.append(
+                    {
+                        "question": user_query,
+                        "answer": answer,
+                        "sources": get_sources(response),
+                    }
                 )
 
             except Exception as e:
@@ -298,3 +522,92 @@ if st.button("Ask AI"):
                 )
 
                 st.exception(e)
+
+
+# --------------------------------------------------
+# Conversation History
+# --------------------------------------------------
+
+if st.session_state.chat_history:
+
+    st.markdown("---")
+
+    st.markdown(
+        """
+<div class="eyebrow">Conversation</div>
+<div class="card-title">Previous questions</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    for index, chat in enumerate(
+        reversed(st.session_state.chat_history)
+    ):
+
+        with st.container(border=True):
+
+            st.markdown(
+                f"**You:** {chat['question']}"
+            )
+
+            st.markdown(
+                '<div class="answer-card">'
+                f"<strong>AI:</strong><br>{chat['answer']}"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+            sources = chat["sources"]
+
+            if sources:
+
+                st.markdown("**Sources**")
+
+                for source in sources:
+
+                    if source["page"] is not None:
+
+                        st.caption(
+                            f"📄 {source['source']} · "
+                            f"Page {source['page']}"
+                        )
+
+                    else:
+
+                        st.caption(
+                            f"📄 {source['source']}"
+                        )
+
+            # ------------------------------------------
+            # Download Answer
+            # ------------------------------------------
+
+            download_text = (
+                f"Question:\n{chat['question']}\n\n"
+                f"Answer:\n{chat['answer']}\n\n"
+                "Sources:\n"
+            )
+
+            for source in sources:
+
+                if source["page"] is not None:
+
+                    download_text += (
+                        f"- {source['source']} "
+                        f"(Page {source['page']})\n"
+                    )
+
+                else:
+
+                    download_text += (
+                        f"- {source['source']}\n"
+                    )
+
+            st.download_button(
+                label="⬇️ Download Answer",
+                data=download_text,
+                file_name=f"rag_answer_{index + 1}.txt",
+                mime="text/plain",
+                use_container_width=True,
+                key=f"download_answer_{index}",
+            )
