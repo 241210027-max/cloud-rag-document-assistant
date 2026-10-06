@@ -1,4 +1,4 @@
-Is it ok--
+
 # Cloud RAG Document Assistant
 
 A cloud-based Retrieval-Augmented Generation (RAG) application that lets users upload PDF documents and ask questions about their contents.
