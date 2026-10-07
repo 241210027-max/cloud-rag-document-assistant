@@ -4,7 +4,7 @@ An AI-powered document question-answering application that allows users to uploa
 
 ## 🚀 Live Demo
 
-Add your deployed application link here.
+[Live Demo](https://cloud-rag-document-assistant-g5svttb3sldjfq8qjeh9tx.streamlit.app/)
 
 ## ✨ Features
 
